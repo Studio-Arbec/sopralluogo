@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#1a3a5c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Sopralluogo Perito</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root{
+    --blu:#1a3a5c; --blu2:#2c5f8a; --sfondo:#f2f4f7; --card:#ffffff;
+    --testo:#1c2733; --grigio:#68788c; --bordo:#d5dce4; --ok:#1e8a4c; --warn:#c47f17; --rosso:#b3352b;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--sfondo); color:var(--testo); font-size:16px;}
+  header{background:var(--blu); color:#fff; padding:14px 16px; padding-top:calc(14px + env(safe-area-inset-top)); position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:10px;}
+  header h1{font-size:17px; margin:0; font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .hbtn{background:rgba(255,255,255,.15); border:none; color:#fff; border-radius:8px; padding:8px 12px; font-size:14px; font-weight:600;}
+  main{padding:14px; padding-bottom:calc(90px + env(safe-area-inset-bottom)); max-width:640px; margin:0 auto;}
+  .card{background:var(--card); border-radius:12px; padding:14px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,.07);}
+  .tipocard{display:block; width:100%; text-align:left; background:var(--card); border:1px solid var(--bordo); border-radius:12px; padding:16px; margin-bottom:10px; font-size:16px;}
+  .tipocard b{display:block; color:var(--blu); margin-bottom:3px;}
+  .tipocard span{color:var(--grigio); font-size:13px;}
+  .sez{background:var(--card); border-radius:12px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,.07); overflow:hidden;}
+  .sez>h2{margin:0; padding:13px 14px; font-size:15px; color:var(--blu); cursor:pointer; display:flex; justify-content:space-between; align-items:center; user-select:none;}
+  .sez>h2::after{content:'▾'; color:var(--grigio); transition:transform .2s;}
+  .sez.chiusa>h2::after{transform:rotate(-90deg);}
+  .sez.chiusa .corpo{display:none;}
+  .corpo{padding:0 14px 14px;}
+  label.fl{display:block; font-size:13px; font-weight:600; color:var(--grigio); margin:12px 0 4px;}
+  input[type=text],input[type=number],input[type=date],input[type=time],input[type=email],select,textarea{
+    width:100%; padding:11px; border:1px solid var(--bordo); border-radius:8px; font-size:16px; background:#fff; color:var(--testo); font-family:inherit;}
+  textarea{min-height:80px; resize:vertical;}
+  .radiog,.chkg{display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;}
+  .radiog label,.chkg label{border:1px solid var(--bordo); border-radius:20px; padding:8px 14px; font-size:14px; background:#fff;}
+  .radiog input,.chkg input{margin-right:5px;}
+  .radiog label:has(input:checked),.chkg label:has(input:checked){background:var(--blu); color:#fff; border-color:var(--blu);}
+  .btn{display:block; width:100%; border:none; border-radius:10px; padding:14px; font-size:16px; font-weight:600; margin-top:10px; text-align:center; text-decoration:none;}
+  .btn.blu{background:var(--blu); color:#fff;}
+  .btn.verde{background:var(--ok); color:#fff;}
+  .btn.arancio{background:var(--warn); color:#fff;}
+  .btn.ghost{background:#fff; color:var(--blu); border:1px solid var(--blu);}
+  .btn.rosso{background:#fff; color:var(--rosso); border:1px solid var(--rosso);}
+  .btn:disabled{opacity:.5;}
+  .fotoitem{display:flex; gap:10px; align-items:flex-start; border-top:1px solid var(--bordo); padding:10px 0;}
+  .fotoitem img{width:86px; height:86px; object-fit:cover; border-radius:8px; flex-shrink:0;}
+  .fotoitem .fi-meta{font-size:11px; color:var(--grigio); margin-top:4px; line-height:1.5;}
+  .fotoitem .fi-del{background:none; border:none; color:var(--rosso); font-size:13px; padding:4px 0; font-weight:600;}
+  .gps-ok{color:var(--ok); font-weight:600;} .gps-no{color:var(--rosso); font-weight:600;}
+  .pratica-riga{display:flex; align-items:center; gap:10px; padding:13px 0; border-bottom:1px solid var(--bordo);}
+  .pratica-riga:last-child{border-bottom:none;}
+  .pratica-info{flex:1; min-width:0;}
+  .pratica-info b{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .pratica-info small{color:var(--grigio);}
+  .badge{font-size:11px; font-weight:700; padding:3px 8px; border-radius:10px; flex-shrink:0;}
+  .badge.bozza{background:#fdf1dc; color:var(--warn);}
+  .badge.pronta{background:#e2f3e9; color:var(--ok);}
+  .hint{font-size:12.5px; color:var(--grigio); margin-top:6px; line-height:1.45;}
+  .footbar{position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--bordo); padding:10px 14px calc(10px + env(safe-area-inset-bottom)); display:flex; gap:10px; z-index:20;}
+  .footbar .btn{margin-top:0; flex:1; padding:12px;}
+  .nascosto{display:none !important;}
+  .toast{position:fixed; bottom:100px; left:50%; transform:translateX(-50%); background:var(--testo); color:#fff; padding:10px 18px; border-radius:20px; font-size:14px; z-index:99; opacity:0; transition:opacity .3s; pointer-events:none; max-width:88%; text-align:center;}
+  .toast.on{opacity:.95;}
+  .avviso{background:#fdf1dc; border:1px solid #ecd9ae; border-radius:10px; padding:11px; font-size:13.5px; color:#7a5410; margin:10px 0; line-height:1.45;}
+  h3.sotto{font-size:13px; color:var(--blu); margin:16px 0 0; text-transform:uppercase; letter-spacing:.4px;}
+  .rep-item{border:1px solid var(--bordo); border-radius:10px; padding:4px 12px 12px; margin-top:10px; position:relative;}
+  .rep-item .rep-del{position:absolute; top:8px; right:10px; background:none; border:none; color:var(--rosso); font-size:13px; font-weight:600;}
+  .progress{font-size:12px; color:var(--grigio); text-align:center; margin-bottom:8px;}
+</style>
+</head>
+<body>
+
+<header>
+  <button class="hbtn nascosto" id="btn-indietro" onclick="vaiHome()">‹ Esci</button>
+  <h1 id="titolo-app">Sopralluogo Perito</h1>
+  <button class="hbtn" id="btn-imposta" onclick="mostraScr('scr-impostazioni')">⚙</button>
+</header>
+
+<main>
+
+  <!-- ================= HOME ================= -->
+  <div id="scr-home">
+    <div class="card">
+      <button class="btn blu" onclick="mostraScr('scr-nuovo')">＋ Nuovo sopralluogo</button>
+    </div>
+    <div class="card">
+      <h2 style="font-size:15px; margin:0 0 4px; color:var(--blu);">Le mie pratiche</h2>
+      <div id="lista-pratiche"><p class="hint">Nessuna pratica salvata.</p></div>
+    </div>
+    <p class="hint" style="text-align:center;">I dati restano salvati su questo telefono anche senza connessione.<br>Studio Schifani — v1.0</p>
+  </div>
+
+  <!-- ================= NUOVO: scelta tipo ================= -->
+  <div id="scr-nuovo" class="nascosto">
+    <p class="hint" style="margin-bottom:10px;">Scegli il tipo di sopralluogo:</p>
+    <button class="tipocard" onclick="nuovaPratica('acqua')"><b>💧 RC danni d'acqua condotta</b><span>Rottura impianti idrici, bagnamento a terzi</span></button>
+    <button class="tipocard" onclick="nuovaPratica('infortunio')"><b>🩹 Accertamento infortunio (RCT)</b><span>Caduta/infortunio di terzi, stato dei luoghi</span></button>
+    <button class="tipocard" onclick="nuovaPratica('dirette')"><b>🏠 Garanzie dirette</b><span>Danni diretti al fabbricato/contenuto assicurato</span></button>
+    <button class="tipocard" onclick="nuovaPratica('cose')"><b>📦 RC danni a cose</b><span>Danni a cose di terzi (causa generica)</span></button>
+    <button class="btn ghost" onclick="vaiHome()">Annulla</button>
+  </div>
+
+  <!-- ================= FORM ================= -->
+  <div id="scr-form" class="nascosto">
+    <div class="progress" id="form-progress"></div>
+    <div id="form-sezioni"></div>
+
+    <!-- FOTO -->
+    <div class="sez" id="sez-foto">
+      <h2 onclick="toggleSez(this)">📷 Fotografie geolocalizzate</h2>
+      <div class="corpo">
+        <p class="hint">Ogni foto viene marcata con coordinate GPS, data e ora. Consenti l'accesso alla posizione quando richiesto. Scatta con buona luce e aggiungi una didascalia.</p>
+        <button class="btn blu" onclick="document.getElementById('input-foto').click()">📷 Scatta / aggiungi foto</button>
+        <input type="file" id="input-foto" accept="image/*" capture="environment" multiple class="nascosto">
+        <div id="lista-foto"></div>
+      </div>
+    </div>
+
+    <!-- ESITO -->
+    <div class="sez" id="sez-esito">
+      <h2 onclick="toggleSez(this)">✅ Esito del sopralluogo</h2>
+      <div class="corpo" id="corpo-esito"></div>
+    </div>
+
+    <div class="avviso" id="avviso-non-scrivibile" style="display:none;">
+      ⚠️ Relazione <b>non ancora scrivibile</b>: i dati raccolti vengono comunque salvati. Puoi inviare intanto la <b>richiesta danni via mail</b> e completare la pratica in seguito.
+    </div>
+
+    <button class="btn verde" id="btn-zip" onclick="generaZip()">📦 Salva e invia allo Studio (ZIP per relazione)</button>
+    <button class="btn arancio" onclick="apriMail()">✉️ Richiesta documentazione / danni via mail</button>
+    <button class="btn ghost" onclick="vaiHome()">Salva bozza ed esci</button>
+  </div>
+
+  <!-- ================= MAIL RICHIESTA DANNI ================= -->
+  <div id="scr-mail" class="nascosto">
+    <div class="card">
+      <h2 style="font-size:15px; margin:0; color:var(--blu);">Richiesta documentazione / danni via mail</h2>
+      <label class="fl">Modello</label>
+      <select id="mail-tpl" onchange="cambiaTemplate()">
+        <option value="amm">All'Amministratore — danni d'acqua</option>
+        <option value="ass">All'Assicurato — danni d'acqua</option>
+        <option value="dan">Al Danneggiato — richiesta danni</option>
+      </select>
+      <label class="fl">Destinatario (email)</label>
+      <input type="email" id="mail-dest" placeholder="email del destinatario">
+      <label class="fl">Oggetto</label>
+      <input type="text" id="mail-ogg">
+      <label class="fl">Testo (modificabile)</label>
+      <textarea id="mail-corpo" style="min-height:260px;"></textarea>
+      <button class="btn blu" onclick="inviaMail()">✉️ Apri nella tua app di posta</button>
+      <button class="btn ghost" onclick="mostraScr('scr-form')">‹ Torna al modulo</button>
+      <p class="hint">Il testo si apre nella tua mail: controlla, eventualmente allega file e invia.</p>
+    </div>
+  </div>
+
+  <!-- ================= IMPOSTAZIONI ================= -->
+  <div id="scr-impostazioni" class="nascosto">
+    <div class="card">
+      <h2 style="font-size:15px; margin:0; color:var(--blu);">Dati del perito rilevatore</h2>
+      <label class="fl">Nome e cognome</label><input type="text" id="set-nome">
+      <label class="fl">Telefono</label><input type="text" id="set-tel">
+      <label class="fl">Email</label><input type="email" id="set-email">
+    </div>
+    <div class="card">
+      <h2 style="font-size:15px; margin:0; color:var(--blu);">Invio allo Studio</h2>
+      <label class="fl">Email dello Studio (destinatario ZIP)</label>
+      <input type="email" id="set-studio" placeholder="incarichi.schifani@gmail.com">
+    </div>
+    <div class="card">
+      <h2 style="font-size:15px; margin:0; color:var(--blu);">Modelli richieste via mail</h2>
+      <p class="hint">Segnaposto disponibili: {RIF} {COMPAGNIA} {ASSICURATO} {DANNEGGIATO} {DATA} {DATA_SOPRALLUOGO} {LUOGO} {PERITO} {TELEFONO}</p>
+      <label class="fl">All'Amministratore — danni d'acqua</label>
+      <textarea id="set-tpl-amm" style="min-height:200px;"></textarea>
+      <label class="fl">All'Assicurato — danni d'acqua</label>
+      <textarea id="set-tpl-ass" style="min-height:200px;"></textarea>
+      <label class="fl">Al Danneggiato — richiesta danni</label>
+      <textarea id="set-tpl-dan" style="min-height:200px;"></textarea>
+      <button class="btn ghost" onclick="ripristinaTemplate()">Ripristina modelli predefiniti</button>
+    </div>
+    <button class="btn blu" onclick="salvaImpostazioni()">Salva impostazioni</button>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* ============================================================
+   SOPRALLUOGO PERITO — Studio Schifani — v1.0
+   PWA per rilievo dati e foto geolocalizzate in sopralluogo.
+   ============================================================ */
+
+// ---------- Definizione campi ----------
+// tipi campo: t=testo, ta=textarea, n=numero, d=data, tm=ora, sel=tendina,
+// radio, chk=scelte multiple, rep=gruppo ripetibile
+const SI_NO = ['Sì','No'];
+
+const SEZ_PRATICA = { id:'pratica', tit:'📋 Pratica', campi:[
+  {id:'rif', tip:'t', lab:'N° sinistro o riferimento pratica *', ph:'es. 011952026000000027 o nome assicurato'},
+  {id:'compagnia', tip:'sel', lab:'Compagnia', op:['Helvetia','HDI','Altra']},
+  {id:'compagnia_altra', tip:'t', lab:'Se altra, quale', showIf:{f:'compagnia', v:'Altra'}},
+  {id:'data_sopralluogo', tip:'d', lab:'Data sopralluogo *'},
+  {id:'presenti', tip:'ta', lab:'Persone presenti al sopralluogo', ph:'nome e ruolo (assicurato, amministratore, controparte, tecnico...)'}
+]};
+
+const SEZ_ASSICURATO = { id:'assicurato', tit:'🏢 Contraente / Assicurato', campi:[
+  {id:'ass_nome', tip:'t', lab:'Nominativo *'},
+  {id:'ass_cf', tip:'t', lab:'C.F. / P.IVA'},
+  {id:'ass_indirizzo', tip:'t', lab:'Indirizzo ubicazione rischio *'},
+  {id:'ass_tipo', tip:'sel', lab:'Tipo', op:['Condominio','Privato','Impresa/attività','Altro']},
+  {id:'amm_nome', tip:'t', lab:'Amministratore / referente'},
+  {id:'amm_email', tip:'t', lab:'Email referente'},
+  {id:'amm_tel', tip:'t', lab:'Telefono referente'}
+]};
+
+const SEZ_CONTROPARTE = { id:'controparte', tit:'👤 Controparte / Danneggiati', rep:{
+  id:'danneggiati', lab:'danneggiato', campi:[
+    {id:'nome', tip:'t', lab:'Nominativo *'},
+    {id:'cf', tip:'t', lab:'C.F.'},
+    {id:'indirizzo', tip:'t', lab:'Indirizzo'},
+    {id:'contatti', tip:'t', lab:'Telefono / email'},
+    {id:'legale', tip:'t', lab:'Legale incaricato (nome)'},
+    {id:'legale_contatti', tip:'t', lab:'Contatti legale (email / tel)'}
+  ]}};
+
+const SEZ_FABBRICATO = { id:'fabbricato', tit:'🏗 Descrizione del rischio / fabbricato', campi:[
+  {id:'fab_tipo', tip:'sel', lab:'Tipo fabbricato', op:['Condominiale','Unifamiliare/villino','Commerciale/produttivo','Altro']},
+  {id:'fab_piani', tip:'n', lab:'Piani fuori terra'},
+  {id:'fab_interrati', tip:'n', lab:'Piani interrati/seminterrati'},
+  {id:'fab_anno', tip:'t', lab:'Anno di costruzione (circa)'},
+  {id:'fab_app', tip:'n', lab:'N° appartamenti/unità'},
+  {id:'fab_scale', tip:'n', lab:'N° scale'},
+  {id:'fab_strutture', tip:'sel', lab:'Strutture portanti', op:['C.a. e completamento in laterizi','Muratura portante','Acciaio','Altro/misto']},
+  {id:'fab_manutenzione', tip:'sel', lab:'Stato di manutenzione', op:['Ottimo','Buono','Discreto','Scadente']},
+  {id:'fab_finitura', tip:'sel', lab:'Grado di finitura', op:['Signorile','Medio','Economico']},
+  {id:'fab_uso', tip:'sel', lab:'Destinazione d\'uso', op:['Abitazioni','Abitazioni e uffici','Uffici','Commerciale','Misto']},
+  {id:'fab_aggravanti', tip:'ta', lab:'Attività/esercizi con possibile aggravamento di rischio', ph:'nessuna, oppure descrivi'},
+  {id:'fab_conforme', tip:'radio', lab:'Rischio conforme alle dichiarazioni contrattuali?', op:['Sì','No','Da verificare']},
+  {id:'fab_note', tip:'ta', lab:'Note sul rischio'}
+]};
+
+const SEZ_CAUSA_ACQUA = { id:'causa', tit:'💧 Cause e modalità dell\'evento', campi:[
+  {id:'elemento_rotto', tip:'sel', lab:'Elemento rotto *', op:['Tubazione di adduzione','Tubazione di scarico','Colonna montante','Collettore/braga','Flessibile sanitario','Contatore','Impianto riscaldamento','Non ancora individuato','Altro']},
+  {id:'elemento_altro', tip:'t', lab:'Se altro, specificare', showIf:{f:'elemento_rotto', v:'Altro'}},
+  {id:'ubicazione_rottura', tip:'t', lab:'Ubicazione della rottura', ph:'es. bagno app. int. 5, sottotraccia parete cucina...'},
+  {id:'opere_ricerca', tip:'radio', lab:'Opere di ricerca e riparazione del guasto *', op:['Eseguite','In corso','Non eseguite']},
+  {id:'causa_accertata', tip:'radio', lab:'Causa del sinistro accertata?', op:['Sì','No']},
+  {id:'causa_descr', tip:'ta', lab:'Descrizione della causa e della dinamica', ph:'cosa si è rotto, perché, come si è propagata l\'acqua...'},
+  {id:'ditta', tip:'t', lab:'Ditta intervenuta per ricerca/riparazione'},
+  {id:'data_riparazione', tip:'d', lab:'Data riparazione (se eseguita)'},
+  {id:'fattura_rip', tip:'radio', lab:'Fattura/giustificativo riparazione disponibile?', op:SI_NO},
+  {id:'tracce', tip:'radio', lab:'Tracce del sinistro conservate?', op:SI_NO}
+]};
+
+const SEZ_DANNI_ACQUA = { id:'danni', tit:'🚿 Danni alla controparte', campi:[
+  {id:'vani', tip:'ta', lab:'Vani interessati dal bagnamento *', ph:'es. camera, bagno e disimpegno dell\'app. sottostante int. 3'},
+  {id:'elementi_dan', tip:'chk', lab:'Elementi danneggiati', op:['Soffitti','Pareti','Pavimenti','Infissi','Mobili/arredi','Elettrodomestici','Merci','Impianti','Altro']},
+  {id:'superfici', tip:'t', lab:'Superfici/estensione stimata', ph:'es. soffitto camera ~8 mq, parete bagno ~4 mq'},
+  {id:'contenuto_descr', tip:'ta', lab:'Danni al contenuto (descrizione)'},
+  {id:'danni_diretti', tip:'radio', lab:'Ci sono anche danni diretti all\'assicurato?', op:SI_NO},
+  {id:'pos_collegata', tip:'t', lab:'Se sì, n° posizione/sinistro collegato', showIf:{f:'danni_diretti', v:'Sì'}}
+]};
+
+const SEZ_IMPORTI = { id:'importi', tit:'💶 Importi e valutazioni', campi:[
+  {id:'importo_richiesto', tip:'t', lab:'Importo richiesto (€)', ph:'se già richiesto'},
+  {id:'stima_perito', tip:'t', lab:'Stima sommaria del perito (€)'},
+  {id:'concordato', tip:'radio', lab:'Danno concordato con la controparte?', op:['Sì','No','In trattativa']},
+  {id:'importo_concordato', tip:'t', lab:'Importo concordato (€)', showIf:{f:'concordato', v:'Sì'}},
+  {id:'rivalsa', tip:'radio', lab:'Opportunità di rivalsa?', op:['No','Sì','Da valutare']},
+  {id:'rivalsa_verso', tip:'t', lab:'Se sì, verso chi', showIf:{f:'rivalsa', v:'Sì'}}
+]};
+
+const SEZ_INFORTUNATO = { id:'infortunato', tit:'🧍 Infortunato', campi:[
+  {id:'inf_nome', tip:'t', lab:'Nome e cognome *'},
+  {id:'inf_eta', tip:'n', lab:'Età'},
+  {id:'inf_minore', tip:'radio', lab:'Minorenne?', op:SI_NO},
+  {id:'inf_genitori', tip:'ta', lab:'Genitori (nome e C.F.)', showIf:{f:'inf_minore', v:'Sì'}},
+  {id:'inf_residenza', tip:'t', lab:'Residenza', ph:'es. residente nel condominio assicurato, int. 4'},
+  {id:'inf_terzieta', tip:'sel', lab:'Rapporto con l\'assicurato', op:['Terzo estraneo','Condomino','Cliente/avventore','Dipendente','Familiare','Altro']}
+]};
+
+const SEZ_DINAMICA = { id:'dinamica', tit:'⚡ Genesi e dinamica del sinistro', campi:[
+  {id:'din_data', tip:'d', lab:'Data infortunio *'},
+  {id:'din_ora', tip:'tm', lab:'Ora (circa)'},
+  {id:'din_luogo', tip:'t', lab:'Luogo esatto di accadimento *', ph:'es. ultima rampa a scendere del vano scala condominiale'},
+  {id:'din_descr', tip:'ta', lab:'Dinamica dichiarata *', ph:'come è avvenuto l\'infortunio secondo la controparte'},
+  {id:'din_causa_dich', tip:'t', lab:'Causa dichiarata', ph:'es. acqua piovana sulle pedate, mattonella dissestata...'},
+  {id:'testimoni', tip:'radio', lab:'Testimoni presenti?', op:SI_NO},
+  {id:'testimoni_nomi', tip:'ta', lab:'Testimoni (nomi e contatti)', showIf:{f:'testimoni', v:'Sì'}},
+  {id:'soccorsi', tip:'radio', lab:'Intervento 118 / accesso in P.S.?', op:['Sì','No','Non noto']}
+]};
+
+const SEZ_DANNO_MEDICO = { id:'medico', tit:'🏥 Danno denunciato', campi:[
+  {id:'lesioni', tip:'ta', lab:'Lesioni riportate', ph:'come da documentazione o dichiarate'},
+  {id:'doc_medica', tip:'ta', lab:'Documentazione medica fornita', ph:'elenca: referto P.S. del..., RM del..., certificati...'},
+  {id:'prognosi', tip:'t', lab:'Prognosi (gg)'},
+  {id:'anomalie_med', tip:'ta', lab:'Riserve/anomalie riscontrate', ph:'es. patologie preesistenti, referti sovrapponibili ante/post sinistro...'}
+]};
+
+const SEZ_LUOGHI = { id:'luoghi', tit:'📍 Stato dei luoghi', campi:[
+  {id:'luoghi_descr', tip:'ta', lab:'Descrizione dettagliata dei luoghi *', ph:'pavimentazione, scale (n° rampe, larghezza, rivestimento, pedata/alzata), illuminazione, vetrate, dislivelli...'},
+  {id:'antiscivolo', tip:'radio', lab:'Strisce antiscivolo presenti (se scala)?', op:['Sì','No','Non pertinente']},
+  {id:'corrimano', tip:'radio', lab:'Corrimano presente (se scala)?', op:['Sì','No','Non pertinente']},
+  {id:'illuminazione', tip:'sel', lab:'Illuminazione', op:['Adeguata','Scarsa','Assente','Non pertinente']},
+  {id:'anomalie_luoghi', tip:'ta', lab:'Anomalie/difetti rilevati *', ph:'es. vetro rotto, mattonella dissestata, assenza segnaletica... oppure: nessuna anomalia'},
+  {id:'conformita', tip:'radio', lab:'Luoghi apparentemente conformi alla normativa?', op:['Sì','No','Da approfondire']},
+  {id:'luoghi_modificati', tip:'radio', lab:'Luoghi modificati dopo il sinistro?', op:['Sì','No','Non noto']},
+  {id:'manutenzione_luoghi', tip:'sel', lab:'Stato di manutenzione dei luoghi', op:['Ottimo','Buono','Discreto','Scadente']}
+]};
+
+const SEZ_RESPONSABILITA = { id:'responsabilita', tit:'⚖️ Valutazioni del perito', campi:[
+  {id:'resp_apparente', tip:'radio', lab:'Responsabilità apparente dell\'assicurato', op:['Sussistente','Dubbia','Da escludere']},
+  {id:'resp_motivo', tip:'ta', lab:'Motivazione', ph:'elementi a favore/contro la responsabilità'},
+  {id:'importo_rich_inf', tip:'t', lab:'Importo richiesto (€, se noto)'}
+]};
+
+const SEZ_CAUSA_GENERICA = { id:'causa', tit:'⚡ Cause e modalità dell\'evento', campi:[
+  {id:'garanzia', tip:'t', lab:'Garanzia invocata/interessata', ph:'es. RCT danni a cose, acqua condotta, eventi atmosferici...'},
+  {id:'causa_descr', tip:'ta', lab:'Cause e dinamica dell\'evento *', ph:'cosa ha provocato il danno e come'},
+  {id:'causa_accertata', tip:'radio', lab:'Causa accertata?', op:SI_NO},
+  {id:'tracce', tip:'radio', lab:'Tracce del sinistro conservate?', op:SI_NO}
+]};
+
+const SEZ_DANNI_GENERICI = { id:'danni', tit:'📦 Danni riscontrati', campi:[
+  {id:'partite', tip:'chk', lab:'Partite/beni interessati', op:['Fabbricato','Contenuto','Merci','Veicoli','Altro']},
+  {id:'danni_descr', tip:'ta', lab:'Descrizione dei danni riscontrati *'},
+  {id:'superfici', tip:'t', lab:'Estensione/quantità stimate'}
+]};
+
+const SEZ_DOC = { id:'doc', tit:'📄 Documentazione', campi:[
+  {id:'doc_raccolta', tip:'chk', lab:'Documenti raccolti/visionati', op:['Denuncia di sinistro','Richiesta danni controparte','Preventivi/fatture','Documenti d\'identità','Foto fornite dall\'assicurato','Referti medici','Polizza e appendici','Verbale autorità','Altro']},
+  {id:'doc_mancante', tip:'ta', lab:'Documentazione mancante da richiedere', ph:'elenca cosa manca'}
+]};
+
+const CAMPI_ESITO = [
+  {id:'scrivibile', tip:'radio', lab:'La relazione è già scrivibile? *', op:['Sì','No']},
+  {id:'motivo_no', tip:'chk', lab:'Perché non è scrivibile?', op:['Documentazione mancante','Opere di ricerca/riparazione non eseguite','Cause del sinistro non ancora note','In attesa richiesta danni','Altro'], showIf:{f:'scrivibile', v:'No'}},
+  {id:'motivo_dett', tip:'ta', lab:'Dettagli', showIf:{f:'scrivibile', v:'No'}},
+  {id:'note_finali', tip:'ta', lab:'Osservazioni finali del perito', ph:'tutto ciò che è utile per la relazione'}
+];
+
+const FORMS = {
+  acqua:      { nome:"RC danni d'acqua condotta", sez:[SEZ_PRATICA, SEZ_ASSICURATO, SEZ_CONTROPARTE, SEZ_FABBRICATO, SEZ_CAUSA_ACQUA, SEZ_DANNI_ACQUA, SEZ_IMPORTI, SEZ_DOC] },
+  infortunio: { nome:"Accertamento infortunio (RCT)", sez:[SEZ_PRATICA, SEZ_ASSICURATO, SEZ_CONTROPARTE, SEZ_INFORTUNATO, SEZ_DINAMICA, SEZ_DANNO_MEDICO, SEZ_LUOGHI, SEZ_RESPONSABILITA, SEZ_DOC] },
+  dirette:    { nome:"Garanzie dirette", sez:[SEZ_PRATICA, SEZ_ASSICURATO, SEZ_FABBRICATO, SEZ_CAUSA_GENERICA, SEZ_DANNI_GENERICI, SEZ_IMPORTI, SEZ_DOC] },
+  cose:       { nome:"RC danni a cose", sez:[SEZ_PRATICA, SEZ_ASSICURATO, SEZ_CONTROPARTE, SEZ_FABBRICATO, SEZ_CAUSA_GENERICA, SEZ_DANNI_GENERICI, SEZ_IMPORTI, SEZ_DOC] }
+};
+
+const TPL_DEFAULT = {
+amm:
+`Spett.le Amministrazione,
+
+in relazione al sinistro in oggetto, con la presente si comunica di aver ricevuto dalla Spett.le {COMPAGNIA} l'incarico di espletare le operazioni peritali.
+
+A tal scopo si informa che sono in atto gli accertamenti nei confronti del Richiedente onde verificare e quantificare i danni reclamati. Di conseguenza, al fine di acquisire la documentazione utile al proseguimento degli accertamenti di rito, si richiede di fornire la documentazione di seguito elencata:
+
+- Documentazione fotografica e cartacea (fatture, preventivi) attestante le opere di ricerca e riparazione del guasto, se già eseguite;
+- Dichiarazione in ordine all'esistenza di ulteriori polizze interessate alla gestione del presente sinistro.
+
+Nel ringraziare anticipatamente della gentile collaborazione, e rimanendo in attesa di ricevere quanto richiesto rispondendo alla presente mail, colgo l'occasione per inviare i migliori saluti.
+
+{PERITO}
+Perito incaricato — tel. {TELEFONO}`,
+ass:
+`Spett.le {ASSICURATO},
+
+in relazione al sinistro in oggetto ed alla riunione di sopralluogo eseguita in data {DATA_SOPRALLUOGO}, al fine di acquisire la documentazione utile al proseguimento degli accertamenti di rito, si richiede di fornire la documentazione di seguito elencata:
+
+- Documentazione fotografica e cartacea (fatture, preventivi) attestante le opere di ricerca e riparazione del guasto, in quanto ad oggi nulla è visibile;
+- Dichiarazione in ordine all'esistenza di ulteriori polizze interessate alla gestione del presente sinistro.
+
+Nel ringraziare anticipatamente della gentile collaborazione, e rimanendo in attesa di ricevere quanto richiesto rispondendo alla presente mail, colgo l'occasione per inviare i migliori saluti.
+
+{PERITO}
+Perito incaricato — tel. {TELEFONO}`,
+dan:
+`Spett.le {DANNEGGIATO},
+
+con riferimento al sinistro {RIF} occorso in data {DATA} presso {LUOGO}, per il quale risulta interessata la posizione assicurativa di {ASSICURATO}, con la presente si comunica di aver ricevuto l'incarico di espletare le operazioni peritali e, al fine di verificare e quantificare i danni reclamati, si richiede di fornire:
+
+- richiesta danni dettagliata e quantificata;
+- preventivi e/o fatture delle riparazioni;
+- documentazione fotografica dei danni;
+- copia di un documento d'identità e codice fiscale.
+
+La documentazione potrà essere inviata rispondendo alla presente mail.
+
+Nel ringraziare anticipatamente della gentile collaborazione, colgo l'occasione per inviare i migliori saluti.
+
+{PERITO}
+Perito incaricato — tel. {TELEFONO}`
+};
+
+// ---------- Stato ----------
+let pratiche = JSON.parse(localStorage.getItem('sp_pratiche') || '[]');
+let corrente = null; // pratica in lavorazione
+let db = null;       // IndexedDB per i blob foto
+
+function salvaPratiche(){ localStorage.setItem('sp_pratiche', JSON.stringify(pratiche)); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on'); setTimeout(()=>t.classList.remove('on'), 2600); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+// ---------- IndexedDB (blob foto) ----------
+function apriDB(){
+  return new Promise((res, rej)=>{
+    const r = indexedDB.open('sp_foto_db', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('foto');
+    r.onsuccess = () => { db = r.result; res(db); };
+    r.onerror = () => rej(r.error);
+  });
+}
+function idbPut(k, blob){ return new Promise((res, rej)=>{ const tx=db.transaction('foto','readwrite'); tx.objectStore('foto').put(blob,k); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }
+function idbGet(k){ return new Promise((res, rej)=>{ const tx=db.transaction('foto'); const q=tx.objectStore('foto').get(k); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }
+function idbDel(k){ return new Promise((res)=>{ const tx=db.transaction('foto','readwrite'); tx.objectStore('foto').delete(k); tx.oncomplete=res; }); }
+
+// ---------- Navigazione ----------
+function mostraScr(id){
+  ['scr-home','scr-nuovo','scr-form','scr-mail','scr-impostazioni'].forEach(s=>document.getElementById(s).classList.toggle('nascosto', s!==id));
+  document.getElementById('btn-indietro').classList.toggle('nascosto', id==='scr-home');
+  document.getElementById('btn-imposta').classList.toggle('nascosto', id!=='scr-home');
+  window.scrollTo(0,0);
+  if(id==='scr-impostazioni') caricaImpostazioni();
+}
+function vaiHome(){ if(corrente){ salvaPratiche(); toast('Bozza salvata'); } corrente=null; document.getElementById('titolo-app').textContent='Sopralluogo Perito'; renderHome(); mostraScr('scr-home'); }
+
+// ---------- Home ----------
+function renderHome(){
+  const box = document.getElementById('lista-pratiche');
+  if(!pratiche.length){ box.innerHTML = '<p class="hint">Nessuna pratica salvata.</p>'; return; }
+  box.innerHTML = '';
+  [...pratiche].sort((a,b)=>b.mod-a.mod).forEach(p=>{
+    const riga = document.createElement('div'); riga.className='pratica-riga';
+    const scrivibile = p.dati.scrivibile === 'Sì';
+    riga.innerHTML = `
+      <div class="pratica-info" onclick="apriPratica('${p.id}')">
+        <b>${(p.dati.rif||'(senza riferimento)')}</b>
+        <small>${FORMS[p.tipo].nome} — ${new Date(p.mod).toLocaleDateString('it-IT')} — ${p.foto.length} foto</small>
+      </div>
+      <span class="badge ${scrivibile?'pronta':'bozza'}">${scrivibile?'PRONTA':'BOZZA'}</span>
+      <button class="fi-del" style="color:var(--rosso);background:none;border:none;font-size:18px;" onclick="eliminaPratica('${p.id}')">🗑</button>`;
+    box.appendChild(riga);
+  });
+}
+function eliminaPratica(id){
+  const p = pratiche.find(x=>x.id===id); if(!p) return;
+  if(!confirm('Eliminare definitivamente la pratica "'+(p.dati.rif||'senza riferimento')+'" e le sue foto?')) return;
+  p.foto.forEach(f=>idbDel(f.id));
+  pratiche = pratiche.filter(x=>x.id!==id); salvaPratiche(); renderHome();
+}
+
+// ---------- Nuova / apri pratica ----------
+function nuovaPratica(tipo){
+  corrente = { id:uid(), tipo, creata:Date.now(), mod:Date.now(), dati:{ data_sopralluogo: new Date().toISOString().slice(0,10) }, danneggiati:[{}], foto:[] };
+  pratiche.push(corrente); salvaPratiche();
+  apriForm();
+}
+function apriPratica(id){ corrente = pratiche.find(p=>p.id===id); if(corrente) apriForm(); }
+
+function apriForm(){
+  document.getElementById('titolo-app').textContent = FORMS[corrente.tipo].nome;
+  renderForm(); renderFoto(); mostraScr('scr-form');
+}
+
+// ---------- Render form ----------
+function toggleSez(h){ h.parentElement.classList.toggle('chiusa'); }
+
+function campoHTML(c, val, prefix){
+  const id = (prefix||'') + c.id;
+  const v = val==null ? '' : val;
+  let inner = '';
+  if(c.tip==='t')  inner = `<input type="text" id="f_${id}" value="${esc(v)}" placeholder="${c.ph||''}">`;
+  if(c.tip==='n')  inner = `<input type="number" id="f_${id}" value="${esc(v)}" inputmode="numeric">`;
+  if(c.tip==='d')  inner = `<input type="date" id="f_${id}" value="${esc(v)}">`;
+  if(c.tip==='tm') inner = `<input type="time" id="f_${id}" value="${esc(v)}">`;
+  if(c.tip==='ta') inner = `<textarea id="f_${id}" placeholder="${c.ph||''}">${esc(v)}</textarea>`;
+  if(c.tip==='sel') inner = `<select id="f_${id}"><option value=""></option>${c.op.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('')}</select>`;
+  if(c.tip==='radio') inner = `<div class="radiog" id="f_${id}">${c.op.map(o=>`<label><input type="radio" name="f_${id}" value="${o}" ${o===v?'checked':''}>${o}</label>`).join('')}</div>`;
+  if(c.tip==='chk'){ const arr = Array.isArray(v)?v:[]; inner = `<div class="chkg" id="f_${id}">${c.op.map(o=>`<label><input type="checkbox" value="${o}" ${arr.includes(o)?'checked':''}>${o}</label>`).join('')}</div>`; }
+  const cond = c.showIf ? ` data-showif-f="${(prefix||'')+c.showIf.f}" data-showif-v="${c.showIf.v}"` : '';
+  return `<div class="campo" data-campo="${id}"${cond}><label class="fl">${c.lab}</label>${inner}</div>`;
+}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function renderForm(){
+  const box = document.getElementById('form-sezioni');
+  box.innerHTML = '';
+  FORMS[corrente.tipo].sez.forEach((s, i)=>{
+    const div = document.createElement('div');
+    div.className = 'sez' + (i>0 ? ' chiusa' : '');
+    let corpo = '';
+    if(s.rep){
+      corpo = `<div id="rep-box">` + corrente.danneggiati.map((d,j)=>repItemHTML(s.rep, d, j)).join('') + `</div>
+        <button class="btn ghost" onclick="aggiungiRep()">＋ Aggiungi ${s.rep.lab}</button>`;
+    } else {
+      corpo = s.campi.map(c=>campoHTML(c, corrente.dati[c.id])).join('');
+    }
+    div.innerHTML = `<h2 onclick="toggleSez(this)">${s.tit}</h2><div class="corpo">${corpo}</div>`;
+    box.appendChild(div);
+  });
+  // esito
+  document.getElementById('corpo-esito').innerHTML = CAMPI_ESITO.map(c=>campoHTML(c, corrente.dati[c.id])).join('');
+  box.parentElement.querySelectorAll('input,textarea,select').forEach(bind);
+  document.getElementById('corpo-esito').querySelectorAll('input,textarea,select').forEach(bind);
+  aggiornaCondizioni(); aggiornaAvviso(); aggiornaProgress();
+}
+function repItemHTML(rep, d, j){
+  return `<div class="rep-item" data-rep="${j}">
+    ${j>0?`<button class="rep-del" onclick="rimuoviRep(${j})">rimuovi</button>`:''}
+    <h3 class="sotto">${rep.lab} ${j+1}</h3>
+    ${rep.campi.map(c=>campoHTML(c, d[c.id], `dg${j}_`)).join('')}
+  </div>`;
+}
+function aggiungiRep(){ corrente.danneggiati.push({}); salvaPratiche(); renderForm(); }
+function rimuoviRep(j){ corrente.danneggiati.splice(j,1); salvaPratiche(); renderForm(); }
+
+function bind(el){
+  const ev = (el.tagName==='SELECT' || el.type==='radio' || el.type==='checkbox' || el.type==='date' || el.type==='time') ? 'change' : 'input';
+  el.addEventListener(ev, ()=>{ leggiCampo(el); corrente.mod = Date.now(); salvaPratiche(); aggiornaCondizioni(); aggiornaAvviso(); aggiornaProgress(); });
+}
+function leggiCampo(el){
+  // individua id campo
+  let cont = el.closest('.campo'); if(!cont) return;
+  const id = cont.dataset.campo;
+  let valore;
+  const g = cont.querySelector('.chkg');
+  if(g){ valore = [...g.querySelectorAll('input:checked')].map(i=>i.value); }
+  else if(cont.querySelector('.radiog')){ const r = cont.querySelector('input:checked'); valore = r ? r.value : ''; }
+  else { valore = cont.querySelector('input,textarea,select').value; }
+  const m = id.match(/^dg(\d+)_(.+)$/);
+  if(m){ corrente.danneggiati[+m[1]][m[2]] = valore; } else { corrente.dati[id] = valore; }
+}
+function valoreDi(id){
+  const m = id.match(/^dg(\d+)_(.+)$/);
+  return m ? (corrente.danneggiati[+m[1]]||{})[m[2]] : corrente.dati[id];
+}
+function aggiornaCondizioni(){
+  document.querySelectorAll('[data-showif-f]').forEach(el=>{
+    el.style.display = (valoreDi(el.dataset.showifF) === el.dataset.showifV) ? '' : 'none';
+  });
+}
+function aggiornaAvviso(){
+  document.getElementById('avviso-non-scrivibile').style.display = (corrente.dati.scrivibile==='No') ? '' : 'none';
+}
+function aggiornaProgress(){
+  const tot = document.querySelectorAll('#form-sezioni .campo, #corpo-esito .campo').length;
+  let pieni = 0;
+  document.querySelectorAll('#form-sezioni .campo, #corpo-esito .campo').forEach(c=>{
+    const v = valoreDi(c.dataset.campo);
+    if(v && (!Array.isArray(v) || v.length)) pieni++;
+  });
+  document.getElementById('form-progress').textContent = `Campi compilati: ${pieni}/${tot} — foto: ${corrente.foto.length}`;
+}
+
+// ---------- Foto geolocalizzate ----------
+document.getElementById('input-foto').addEventListener('change', async (e)=>{
+  const files = [...e.target.files];
+  e.target.value = '';
+  if(!files.length) return;
+  toast('Acquisizione GPS in corso…');
+  const gps = await leggiGPS();
+  for(const f of files){
+    try{
+      const blob = await elaboraFoto(f, gps);
+      const fid = uid();
+      await idbPut(fid, blob);
+      corrente.foto.push({ id:fid, ts:Date.now(), lat:gps?gps.lat:null, lon:gps?gps.lon:null, acc:gps?gps.acc:null, didascalia:'' });
+    }catch(err){ toast('Errore foto: '+err.message); }
+  }
+  corrente.mod = Date.now(); salvaPratiche(); renderFoto(); aggiornaProgress();
+  toast(gps ? 'Foto salvate con posizione GPS ✓' : 'Foto salvate SENZA GPS (posizione non disponibile)');
+});
+
+function leggiGPS(){
+  return new Promise((res)=>{
+    if(!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(
+      p=>res({lat:p.coords.latitude, lon:p.coords.longitude, acc:Math.round(p.coords.accuracy)}),
+      ()=>res(null),
+      {enableHighAccuracy:true, timeout:12000, maximumAge:30000}
+    );
+  });
+}
+
+function elaboraFoto(file, gps){
+  return new Promise((res, rej)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      URL.revokeObjectURL(url);
+      const MAX = 1600;
+      let w = img.width, h = img.height;
+      if(Math.max(w,h) > MAX){ const k = MAX/Math.max(w,h); w = Math.round(w*k); h = Math.round(h*k); }
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      const cx = cv.getContext('2d');
+      cx.drawImage(img, 0, 0, w, h);
+      // timbro in basso
+      const ora = new Date();
+      const r1 = gps ? `GPS ${gps.lat.toFixed(6)}, ${gps.lon.toFixed(6)}  (±${gps.acc} m)` : 'GPS NON DISPONIBILE';
+      const r2 = ora.toLocaleDateString('it-IT') + ' ' + ora.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}) + (corrente.dati.rif ? '  —  rif. ' + corrente.dati.rif : '');
+      const fh = Math.max(14, Math.round(w/50));
+      const bh = fh*2 + 18;
+      cx.fillStyle = 'rgba(0,0,0,0.55)'; cx.fillRect(0, h-bh, w, bh);
+      cx.fillStyle = '#fff'; cx.font = `bold ${fh}px sans-serif`; cx.textBaseline = 'top';
+      cx.fillText(r1, 10, h-bh+6);
+      cx.font = `${fh}px sans-serif`;
+      cx.fillText(r2, 10, h-bh+fh+10);
+      cv.toBlob(b=> b ? res(b) : rej(new Error('conversione fallita')), 'image/jpeg', 0.82);
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error('immagine non leggibile')); };
+    img.src = url;
+  });
+}
+
+async function renderFoto(){
+  const box = document.getElementById('lista-foto');
+  box.innerHTML = '';
+  for(let i=0; i<corrente.foto.length; i++){
+    const f = corrente.foto[i];
+    const blob = await idbGet(f.id);
+    const div = document.createElement('div'); div.className = 'fotoitem';
+    const gpsTxt = f.lat!=null ? `<span class="gps-ok">GPS ✓</span> ${f.lat.toFixed(5)}, ${f.lon.toFixed(5)}` : `<span class="gps-no">GPS assente</span>`;
+    div.innerHTML = `
+      <img src="${blob ? URL.createObjectURL(blob) : ''}" alt="foto ${i+1}">
+      <div style="flex:1;">
+        <input type="text" placeholder="Didascalia foto ${i+1} (es. rottura tubazione bagno)" value="${esc(f.didascalia)}"
+          oninput="corrente.foto[${i}].didascalia=this.value; corrente.mod=Date.now(); salvaPratiche();">
+        <div class="fi-meta">${gpsTxt} — ${new Date(f.ts).toLocaleString('it-IT')}</div>
+        <button class="fi-del" onclick="eliminaFoto(${i})">Elimina foto</button>
+      </div>`;
+    box.appendChild(div);
+  }
+}
+function eliminaFoto(i){
+  if(!confirm('Eliminare questa foto?')) return;
+  idbDel(corrente.foto[i].id);
+  corrente.foto.splice(i,1); salvaPratiche(); renderFoto(); aggiornaProgress();
+}
+
+// ---------- Validazione minima ----------
+function validaMinimo(){
+  const err = [];
+  if(!corrente.dati.rif) err.push('N° sinistro o riferimento pratica');
+  if(!corrente.dati.ass_nome) err.push('Nominativo assicurato');
+  if(!corrente.dati.scrivibile) err.push('Esito: indica se la relazione è scrivibile');
+  if(!corrente.foto.length) err.push('Almeno una fotografia');
+  return err;
+}
+
+// ---------- Export ZIP ----------
+function testoLeggibile(){
+  const perito = JSON.parse(localStorage.getItem('sp_perito') || '{}');
+  let out = `SOPRALLUOGO — ${FORMS[corrente.tipo].nome.toUpperCase()}\n`;
+  out += `Riferimento: ${corrente.dati.rif||'-'}\nCompilato il: ${new Date().toLocaleString('it-IT')}\n`;
+  out += `Perito rilevatore: ${perito.nome||'-'} — tel. ${perito.tel||'-'} — ${perito.email||'-'}\n`;
+  out += '='.repeat(60) + '\n';
+  const stampa = (campi, dati, indent)=> campi.forEach(c=>{
+    let v = dati[c.id];
+    if(v==null || v==='' || (Array.isArray(v)&&!v.length)) v='-';
+    if(Array.isArray(v)) v = v.join(', ');
+    out += `${indent}${c.lab.replace(' *','')}: ${v}\n`;
+  });
+  FORMS[corrente.tipo].sez.forEach(s=>{
+    out += `\n### ${s.tit.replace(/^[^\w]*\s*/,'')}\n`;
+    if(s.rep){
+      corrente.danneggiati.forEach((d,j)=>{ out += ` — ${s.rep.lab} ${j+1}:\n`; stampa(s.rep.campi, d, '   '); });
+    } else stampa(s.campi, corrente.dati, ' ');
+  });
+  out += `\n### Esito\n`; stampa(CAMPI_ESITO, corrente.dati, ' ');
+  out += `\n### Fotografie (${corrente.foto.length})\n`;
+  corrente.foto.forEach((f,i)=>{
+    out += ` foto_${String(i+1).padStart(2,'0')}.jpg — ${f.didascalia||'(senza didascalia)'} — `;
+    out += f.lat!=null ? `GPS ${f.lat.toFixed(6)}, ${f.lon.toFixed(6)} (±${f.acc}m)` : 'GPS non disponibile';
+    out += ` — ${new Date(f.ts).toLocaleString('it-IT')}\n`;
+  });
+  return out;
+}
+
+async function generaZip(){
+  const err = validaMinimo();
+  if(err.length){ toast('Mancano: ' + err.join('; ')); return; }
+  toast('Creazione ZIP in corso…');
+  try{
+    const perito = JSON.parse(localStorage.getItem('sp_perito') || '{}');
+    const zip = new JSZip();
+    const dati = {
+      formato: 'sopralluogo-studio-schifani',
+      versione: 1,
+      tipo: corrente.tipo,
+      tipo_nome: FORMS[corrente.tipo].nome,
+      esportato_il: new Date().toISOString(),
+      perito_rilevatore: perito,
+      dati: corrente.dati,
+      danneggiati: corrente.danneggiati,
+      foto: corrente.foto.map((f,i)=>({ file:`foto/foto_${String(i+1).padStart(2,'0')}.jpg`, didascalia:f.didascalia, lat:f.lat, lon:f.lon, accuratezza_m:f.acc, scattata_il:new Date(f.ts).toISOString() }))
+    };
+    zip.file('dati.json', JSON.stringify(dati, null, 2));
+    zip.file('dati.txt', testoLeggibile());
+    for(let i=0; i<corrente.foto.length; i++){
+      const blob = await idbGet(corrente.foto[i].id);
+      if(blob) zip.file(`foto/foto_${String(i+1).padStart(2,'0')}.jpg`, blob);
+    }
+    const blob = await zip.generateAsync({type:'blob', compression:'DEFLATE'});
+    const nome = `sopralluogo_${(corrente.dati.rif||'pratica').replace(/[^\w-]+/g,'_')}_${new Date().toISOString().slice(0,10)}.zip`;
+    const file = new File([blob], nome, {type:'application/zip'});
+    const studio = localStorage.getItem('sp_studio_email') || 'incarichi.schifani@gmail.com';
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title:nome, text:`Sopralluogo ${corrente.dati.rif||''} — inviare a ${studio}`});
+      toast('ZIP condiviso ✓');
+    } else {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = nome; a.click();
+      toast(`ZIP scaricato: invialo a ${studio}`);
+    }
+  }catch(e){
+    if(e.name!=='AbortError') toast('Errore: ' + e.message);
+  }
+}
+
+// ---------- Richieste via mail ----------
+function templateDi(k){ return localStorage.getItem('sp_tpl_'+k) || TPL_DEFAULT[k]; }
+function itData(iso){ return iso ? iso.split('-').reverse().join('/') : '…………'; }
+
+function compilaTemplate(k){
+  const perito = JSON.parse(localStorage.getItem('sp_perito') || '{}');
+  const d0 = (corrente.danneggiati && corrente.danneggiati[0]) || {};
+  let compagnia = corrente.dati.compagnia || '…………';
+  if(compagnia==='Altra') compagnia = corrente.dati.compagnia_altra || '…………';
+  return templateDi(k)
+    .replaceAll('{RIF}', corrente.dati.rif || '…………')
+    .replaceAll('{COMPAGNIA}', compagnia)
+    .replaceAll('{ASSICURATO}', corrente.dati.ass_nome || '…………')
+    .replaceAll('{DANNEGGIATO}', d0.nome || '…………')
+    .replaceAll('{DATA}', itData(corrente.dati.din_data || ''))
+    .replaceAll('{DATA_SOPRALLUOGO}', itData(corrente.dati.data_sopralluogo || ''))
+    .replaceAll('{LUOGO}', corrente.dati.ass_indirizzo || '…………')
+    .replaceAll('{PERITO}', perito.nome || '…………')
+    .replaceAll('{TELEFONO}', perito.tel || '…………');
+}
+
+function apriMail(){
+  // modello iniziale: amministratore per rami danni, danneggiato per infortuni
+  const k = (corrente.tipo === 'infortunio') ? 'dan' : 'amm';
+  document.getElementById('mail-tpl').value = k;
+  cambiaTemplate();
+  mostraScr('scr-mail');
+}
+
+function cambiaTemplate(){
+  const k = document.getElementById('mail-tpl').value;
+  const d0 = (corrente.danneggiati && corrente.danneggiati[0]) || {};
+  document.getElementById('mail-corpo').value = compilaTemplate(k);
+  document.getElementById('mail-ogg').value =
+    `Sinistro ${corrente.dati.rif||''} — ${corrente.dati.ass_nome||''} — richiesta documentazione`.trim();
+  // destinatario suggerito in base al modello
+  let sorgente = (k==='dan') ? (d0.contatti||'')+' '+(d0.legale_contatti||'') : (corrente.dati.amm_email||'');
+  const dest = sorgente.match(/[\w.+-]+@[\w.-]+\.\w+/);
+  document.getElementById('mail-dest').value = dest ? dest[0] : '';
+}
+function inviaMail(){
+  const dest = document.getElementById('mail-dest').value.trim();
+  if(!dest){ toast('Inserisci l\'email del destinatario'); return; }
+  const ogg = encodeURIComponent(document.getElementById('mail-ogg').value);
+  const corpo = encodeURIComponent(document.getElementById('mail-corpo').value);
+  window.location.href = `mailto:${dest}?subject=${ogg}&body=${corpo}`;
+}
+
+// ---------- Impostazioni ----------
+function caricaImpostazioni(){
+  const p = JSON.parse(localStorage.getItem('sp_perito') || '{}');
+  document.getElementById('set-nome').value = p.nome || '';
+  document.getElementById('set-tel').value = p.tel || '';
+  document.getElementById('set-email').value = p.email || '';
+  document.getElementById('set-studio').value = localStorage.getItem('sp_studio_email') || 'incarichi.schifani@gmail.com';
+  document.getElementById('set-tpl-amm').value = templateDi('amm');
+  document.getElementById('set-tpl-ass').value = templateDi('ass');
+  document.getElementById('set-tpl-dan').value = templateDi('dan');
+}
+function salvaImpostazioni(){
+  localStorage.setItem('sp_perito', JSON.stringify({
+    nome: document.getElementById('set-nome').value.trim(),
+    tel: document.getElementById('set-tel').value.trim(),
+    email: document.getElementById('set-email').value.trim()
+  }));
+  localStorage.setItem('sp_studio_email', document.getElementById('set-studio').value.trim() || 'incarichi.schifani@gmail.com');
+  localStorage.setItem('sp_tpl_amm', document.getElementById('set-tpl-amm').value);
+  localStorage.setItem('sp_tpl_ass', document.getElementById('set-tpl-ass').value);
+  localStorage.setItem('sp_tpl_dan', document.getElementById('set-tpl-dan').value);
+  toast('Impostazioni salvate ✓'); vaiHome();
+}
+function ripristinaTemplate(){
+  document.getElementById('set-tpl-amm').value = TPL_DEFAULT.amm;
+  document.getElementById('set-tpl-ass').value = TPL_DEFAULT.ass;
+  document.getElementById('set-tpl-dan').value = TPL_DEFAULT.dan;
+}
+
+// ---------- Avvio ----------
+(async function(){
+  await apriDB();
+  renderHome();
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+  // primo avvio: chiedi dati perito
+  if(!localStorage.getItem('sp_perito')) mostraScr('scr-impostazioni');
+})();
+</script>
+</body>
+</html>
