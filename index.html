@@ -168,7 +168,7 @@
     <div class="card">
       <h2 style="font-size:15px; margin:0; color:var(--blu);">Invio allo Studio</h2>
       <label class="fl">Email dello Studio (destinatario ZIP)</label>
-      <input type="email" id="set-studio" placeholder="incarichi.schifani@gmail.com">
+      <input type="email" id="set-studio" placeholder="lorenzo.schifani@arbec.it">
     </div>
     <div class="card">
       <h2 style="font-size:15px; margin:0; color:var(--blu);">Modelli richieste via mail</h2>
@@ -707,7 +707,7 @@ async function generaZip(){
     const blob = await zip.generateAsync({type:'blob', compression:'DEFLATE'});
     const nome = `sopralluogo_${(corrente.dati.rif||'pratica').replace(/[^\w-]+/g,'_')}_${new Date().toISOString().slice(0,10)}.zip`;
     const file = new File([blob], nome, {type:'application/zip'});
-    const studio = localStorage.getItem('sp_studio_email') || 'incarichi.schifani@gmail.com';
+    const studio = localStorage.getItem('sp_studio_email') || 'lorenzo.schifani@arbec.it';
     if(navigator.canShare && navigator.canShare({files:[file]})){
       await navigator.share({files:[file], title:nome, text:`Sopralluogo ${corrente.dati.rif||''} — inviare a ${studio}`});
       toast('ZIP condiviso ✓');
@@ -775,7 +775,7 @@ function caricaImpostazioni(){
   document.getElementById('set-nome').value = p.nome || '';
   document.getElementById('set-tel').value = p.tel || '';
   document.getElementById('set-email').value = p.email || '';
-  document.getElementById('set-studio').value = localStorage.getItem('sp_studio_email') || 'incarichi.schifani@gmail.com';
+  document.getElementById('set-studio').value = localStorage.getItem('sp_studio_email') || 'lorenzo.schifani@arbec.it';
   document.getElementById('set-tpl-amm').value = templateDi('amm');
   document.getElementById('set-tpl-ass').value = templateDi('ass');
   document.getElementById('set-tpl-dan').value = templateDi('dan');
@@ -786,7 +786,7 @@ function salvaImpostazioni(){
     tel: document.getElementById('set-tel').value.trim(),
     email: document.getElementById('set-email').value.trim()
   }));
-  localStorage.setItem('sp_studio_email', document.getElementById('set-studio').value.trim() || 'incarichi.schifani@gmail.com');
+  localStorage.setItem('sp_studio_email', document.getElementById('set-studio').value.trim() || 'lorenzo.schifani@arbec.it');
   localStorage.setItem('sp_tpl_amm', document.getElementById('set-tpl-amm').value);
   localStorage.setItem('sp_tpl_ass', document.getElementById('set-tpl-ass').value);
   localStorage.setItem('sp_tpl_dan', document.getElementById('set-tpl-dan').value);
