@@ -1,5 +1,5 @@
 /* Service worker - cache per uso offline */
-const CACHE = 'sopralluogo-v1';
+const CACHE = 'sopralluogo-v2';
 const ASSETS = [
   './',
   './index.html',

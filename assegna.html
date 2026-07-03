@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Assegna pratica — Studio ARBEC</title>
+<style>
+  :root{--blu:#1a3a5c; --sfondo:#f2f4f7; --card:#fff; --testo:#1c2733; --grigio:#68788c; --bordo:#d5dce4; --ok:#1e8a4c;}
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--sfondo); color:var(--testo); font-size:16px;}
+  header{background:var(--blu); color:#fff; padding:14px 16px;}
+  header h1{font-size:17px; margin:0; font-weight:600;}
+  main{padding:14px; max-width:640px; margin:0 auto;}
+  .card{background:var(--card); border-radius:12px; padding:14px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,.07);}
+  label.fl{display:block; font-size:13px; font-weight:600; color:var(--grigio); margin:12px 0 4px;}
+  input,select,textarea{width:100%; padding:11px; border:1px solid var(--bordo); border-radius:8px; font-size:16px; font-family:inherit;}
+  .btn{display:block; width:100%; border:none; border-radius:10px; padding:14px; font-size:16px; font-weight:600; margin-top:10px; cursor:pointer;}
+  .btn.blu{background:var(--blu); color:#fff;}
+  .btn.verde{background:var(--ok); color:#fff;}
+  .hint{font-size:12.5px; color:var(--grigio); line-height:1.45;}
+  .nascosto{display:none;}
+  .toast{position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:var(--testo); color:#fff; padding:10px 18px; border-radius:20px; font-size:14px; opacity:0; transition:opacity .3s; pointer-events:none;}
+  .toast.on{opacity:.95;}
+  h2{font-size:15px; margin:0; color:var(--blu);}
+</style>
+</head>
+<body>
+<header><h1>📨 Assegna pratica a un perito — Studio ARBEC</h1></header>
+<main>
+  <div class="card">
+    <p class="hint" style="margin-top:0;">Pagina riservata alla segreteria. Carica il file XML della compagnia: i dati vengono estratti e trasformati in un messaggio WhatsApp per il perito incaricato. Aprendo il link, il perito trova la pratica precompilata nella sua app Sopralluogo.</p>
+    <button class="btn blu" onclick="document.getElementById('input-xml').click()">📂 Carica file XML</button>
+    <input type="file" id="input-xml" accept=".xml,text/xml" class="nascosto">
+  </div>
+  <div id="assegna-anteprima" class="nascosto">
+    <div class="card">
+      <h2>Anteprima (modificabile)</h2>
+      <label class="fl">Tipo di sopralluogo</label>
+      <select id="as-tipo">
+        <option value="acqua">RC danni d'acqua condotta</option>
+        <option value="infortunio">Accertamento infortunio (RCT)</option>
+        <option value="dirette">Garanzie dirette</option>
+        <option value="cose">RC danni a cose</option>
+      </select>
+      <label class="fl">N° sinistro</label><input type="text" id="as-rif">
+      <label class="fl">Compagnia</label><input type="text" id="as-compagnia">
+      <label class="fl">Assicurato / Contraente</label><input type="text" id="as-ass">
+      <label class="fl">Indirizzo ubicazione rischio</label><input type="text" id="as-ind">
+      <label class="fl">Danneggiato</label><input type="text" id="as-dan">
+      <label class="fl">C.F. danneggiato</label><input type="text" id="as-dancf">
+      <label class="fl">Contatti danneggiato</label><input type="text" id="as-dancont">
+      <label class="fl">N° polizza</label><input type="text" id="as-polizza">
+      <label class="fl">Data sinistro</label><input type="date" id="as-datasin">
+      <label class="fl">Nota per il perito (facoltativa)</label><textarea id="as-nota" style="min-height:60px;"></textarea>
+    </div>
+    <button class="btn verde" onclick="condividiIncarico('wa')">💬 Invia su WhatsApp</button>
+    <button class="btn blu" onclick="condividiIncarico('copia')">📋 Copia messaggio</button>
+    <p class="hint" style="text-align:center;">Il messaggio contiene un link con i dati della pratica: nessun dato viene salvato su server.</p>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('on'); setTimeout(()=>t.classList.remove('on'),2600); }
+
+// ---- Parser XML incarichi (Autosoft/Helvetia: ReIncaricoBaseRecord e IncaricoAccertatoreRecord) ----
+function figlio(el, tag){ if(!el) return null; return el.getElementsByTagName(tag)[0] || null; }
+function testoDi(el, tag){ const n = figlio(el, tag); return n ? n.textContent.trim() : ''; }
+function indirizzoDa(el){
+  if(!el) return '';
+  const parti = [testoDi(el,'Indirizzo'), testoDi(el,'NumeroCivico')].filter(Boolean).join(' ');
+  let cap = testoDi(el,'Cap'); if(cap && cap.length<5) cap = cap.padStart(5,'0');
+  const loc = [cap, testoDi(el,'Luogo'), testoDi(el,'Provincia') ? '('+testoDi(el,'Provincia')+')' : ''].filter(Boolean).join(' ');
+  return [parti, loc].filter(Boolean).join(' - ');
+}
+function parseXmlIncarico(txt){
+  const doc = new DOMParser().parseFromString(txt, 'text/xml');
+  if(doc.getElementsByTagName('parsererror').length) throw new Error('file XML non valido');
+  const root = doc.documentElement;
+  const contr = figlio(root,'Contraente');
+  const polizza = figlio(root,'Polizza');
+  const ls = figlio(root,'luogosinistro');
+  const luogoSin = ls ? [testoDi(ls,'indirizzo'), [testoDi(ls,'cap'), testoDi(ls,'luogo'), testoDi(ls,'provincia')].filter(Boolean).join(' ')].filter(Boolean).join(' - ') : '';
+  const nomeDi = (el)=> [testoDi(el,'Cognome'), testoDi(el,'Nome')].filter(Boolean).join(' ');
+  const dgs = [];
+  const dansEl = figlio(root,'Danneggiati');
+  if(dansEl){
+    [...dansEl.children].forEach(d=>{
+      if(!d.tagName.includes('Record')) return;
+      const contatti = [];
+      const rec = figlio(d,'Recapiti');
+      if(rec) [...rec.getElementsByTagName('Recapito')].forEach(r=>{ if(r.textContent.trim()) contatti.push(r.textContent.trim()); });
+      dgs.push({ nome:nomeDi(d), cf:testoDi(d,'CodiceFiscale')||testoDi(d,'PartitaIVA'), indirizzo:indirizzoDa(figlio(d,'residenza')), contatti:contatti.join(' / ') });
+    });
+  }
+  let descr = [];
+  [...(polizza||root).getElementsByTagName('Descrizione')].forEach(n=>{ if(n.textContent.trim()) descr.push(n.textContent.trim()); });
+  descr = [...new Set(descr)].join(' | ');
+  let tipo = 'acqua';
+  if(/INFORTUN|LESION|RCT.*PERSON|CADUTA/i.test(descr+testoDi(root,'IDTipoSinistro'))) tipo = 'infortunio';
+  else if(/ACQUA|IDRIC|BAGNAMENT/i.test(descr)) tipo = 'acqua';
+  return {
+    tipo, rif: testoDi(root,'NumeroSinistro'),
+    compagnia: testoDi(root,'NomeCompagnia') || 'Helvetia',
+    ass_nome: contr ? nomeDi(contr) : '',
+    ass_indirizzo: contr ? indirizzoDa(figlio(contr,'indirizzo')) : '',
+    danneggiati: dgs.length ? dgs : [{}],
+    x: {
+      idIncarico: testoDi(root,'IDIncarico'), dataIncarico: testoDi(root,'DataIncarico'),
+      dataSinistro: (testoDi(root,'DataOraSinistro')||'').slice(0,10),
+      liquidatore: testoDi(root,'NomeLiquidatore'), tipoSinistro: testoDi(root,'IDTipoSinistro'),
+      polizza: polizza ? testoDi(polizza,'Numero') : '', ramo: polizza ? testoDi(polizza,'Ramo') : '',
+      agenzia: polizza ? testoDi(polizza,'CodiceAgenzia') : '',
+      inizioCopertura: polizza ? testoDi(polizza,'DataInizioCopertura') : '',
+      fineCopertura: polizza ? testoDi(polizza,'DataFineCopertura') : '',
+      luogoSinistro: luogoSin, descrizione: testoDi(root,'descrizioneSinitro'), garanzie: descr
+    }
+  };
+}
+
+let assegnaDati = null;
+document.getElementById('input-xml').addEventListener('change', (e)=>{
+  const f = e.target.files[0]; e.target.value='';
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{
+    try{
+      assegnaDati = parseXmlIncarico(r.result);
+      const v = (id,val)=>document.getElementById(id).value = val||'';
+      v('as-tipo', assegnaDati.tipo); v('as-rif', assegnaDati.rif); v('as-compagnia', assegnaDati.compagnia);
+      v('as-ass', assegnaDati.ass_nome); v('as-ind', assegnaDati.ass_indirizzo);
+      v('as-dan', (assegnaDati.danneggiati[0]||{}).nome); v('as-dancf', (assegnaDati.danneggiati[0]||{}).cf);
+      v('as-dancont', (assegnaDati.danneggiati[0]||{}).contatti); v('as-polizza', assegnaDati.x.polizza);
+      v('as-datasin', assegnaDati.x.dataSinistro); v('as-nota','');
+      document.getElementById('assegna-anteprima').classList.remove('nascosto');
+      toast('XML letto ✓ — controlla l\'anteprima');
+    }catch(err){ toast('Errore lettura XML: '+err.message); }
+  };
+  r.readAsText(f);
+});
+
+function b64enc(s){ return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+
+function payloadDaAnteprima(){
+  const g = id=>document.getElementById(id).value.trim();
+  const p = assegnaDati || {danneggiati:[{}], x:{}};
+  const d0 = {...(p.danneggiati[0]||{}), nome:g('as-dan'), cf:g('as-dancf'), contatti:g('as-dancont')};
+  return {
+    v:1, t: g('as-tipo'),
+    d: {
+      rif: g('as-rif'),
+      compagnia: /helvetia/i.test(g('as-compagnia')) ? 'Helvetia' : (/hdi/i.test(g('as-compagnia')) ? 'HDI' : 'Altra'),
+      compagnia_altra: g('as-compagnia'),
+      ass_nome: g('as-ass'), ass_indirizzo: g('as-ind'),
+      din_data: g('as-tipo')==='infortunio' ? g('as-datasin') : ''
+    },
+    g: [d0, ...(p.danneggiati.slice(1))],
+    x: {...p.x, polizza:g('as-polizza'), dataSinistro:g('as-datasin'), nota:g('as-nota')}
+  };
+}
+
+function condividiIncarico(via){
+  const pl = payloadDaAnteprima();
+  if(!pl.d.rif){ toast('Manca il n° sinistro'); return; }
+  const base = location.href.replace(/assegna\.html.*$/,'');
+  const link = base + '#p=' + b64enc(JSON.stringify(pl));
+  const msg = `📨 Nuovo incarico Studio ARBEC\nSinistro ${pl.d.rif} — ${pl.d.ass_nome}\n${pl.x.nota ? 'Nota: '+pl.x.nota+'\n' : ''}Tocca il link per caricare la pratica nell'app Sopralluogo:\n${link}\n\nSe il link non apre l'app: copia tutto questo messaggio, apri l'app e usa "Aggiungi incarico da codice".`;
+  if(via==='wa'){
+    window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+  } else {
+    navigator.clipboard.writeText(msg).then(()=>toast('Messaggio copiato ✓')).catch(()=>prompt('Copia il messaggio:', msg));
+  }
+}
+</script>
+</body>
+</html>

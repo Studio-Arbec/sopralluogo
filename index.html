@@ -92,45 +92,7 @@
       <h2 style="font-size:15px; margin:0 0 4px; color:var(--blu);">Le mie pratiche</h2>
       <div id="lista-pratiche"><p class="hint">Nessuna pratica salvata.</p></div>
     </div>
-    <div class="card">
-      <button class="btn ghost" onclick="mostraScr('scr-assegna')" style="border-style:dashed;">📨 Assegna pratica a un perito (Studio)</button>
-    </div>
-    <p class="hint" style="text-align:center;">I dati restano salvati su questo telefono anche senza connessione.<br>Studio Schifani — v1.1</p>
-  </div>
-
-  <!-- ================= ASSEGNA PRATICA (Studio) ================= -->
-  <div id="scr-assegna" class="nascosto">
-    <div class="card">
-      <h2 style="font-size:15px; margin:0 0 4px; color:var(--blu);">Assegna pratica a un perito</h2>
-      <p class="hint">Carica il file XML della compagnia: i dati vengono estratti e trasformati in un link da inviare su WhatsApp al perito incaricato. Aprendo il link, il perito trova la pratica già precompilata nella sua app.</p>
-      <button class="btn blu" onclick="document.getElementById('input-xml').click()">📂 Carica file XML</button>
-      <input type="file" id="input-xml" accept=".xml,text/xml" class="nascosto">
-    </div>
-    <div id="assegna-anteprima" class="nascosto">
-      <div class="card">
-        <h2 style="font-size:15px; margin:0; color:var(--blu);">Anteprima (modificabile)</h2>
-        <label class="fl">Tipo di sopralluogo</label>
-        <select id="as-tipo">
-          <option value="acqua">RC danni d'acqua condotta</option>
-          <option value="infortunio">Accertamento infortunio (RCT)</option>
-          <option value="dirette">Garanzie dirette</option>
-          <option value="cose">RC danni a cose</option>
-        </select>
-        <label class="fl">N° sinistro</label><input type="text" id="as-rif">
-        <label class="fl">Compagnia</label><input type="text" id="as-compagnia">
-        <label class="fl">Assicurato / Contraente</label><input type="text" id="as-ass">
-        <label class="fl">Indirizzo ubicazione rischio</label><input type="text" id="as-ind">
-        <label class="fl">Danneggiato</label><input type="text" id="as-dan">
-        <label class="fl">C.F. danneggiato</label><input type="text" id="as-dancf">
-        <label class="fl">Contatti danneggiato</label><input type="text" id="as-dancont">
-        <label class="fl">N° polizza</label><input type="text" id="as-polizza">
-        <label class="fl">Data sinistro</label><input type="date" id="as-datasin">
-        <label class="fl">Nota per il perito (facoltativa)</label><textarea id="as-nota" style="min-height:60px;"></textarea>
-      </div>
-      <button class="btn verde" onclick="condividiIncarico('wa')">💬 Invia su WhatsApp</button>
-      <button class="btn blu" onclick="condividiIncarico('share')">📤 Condividi / copia messaggio</button>
-    </div>
-    <button class="btn ghost" onclick="vaiHome()">‹ Torna alla home</button>
+    <p class="hint" style="text-align:center;">I dati restano salvati su questo telefono anche senza connessione.<br>Studio Schifani — v1.2</p>
   </div>
 
   <!-- ================= NUOVO: scelta tipo ================= -->
@@ -459,7 +421,7 @@ function idbDel(k){ return new Promise((res)=>{ const tx=db.transaction('foto','
 
 // ---------- Navigazione ----------
 function mostraScr(id){
-  ['scr-home','scr-nuovo','scr-form','scr-mail','scr-impostazioni','scr-assegna'].forEach(s=>document.getElementById(s).classList.toggle('nascosto', s!==id));
+  ['scr-home','scr-nuovo','scr-form','scr-mail','scr-impostazioni'].forEach(s=>document.getElementById(s).classList.toggle('nascosto', s!==id));
   document.getElementById('btn-indietro').classList.toggle('nascosto', id==='scr-home');
   document.getElementById('btn-imposta').classList.toggle('nascosto', id!=='scr-home');
   window.scrollTo(0,0);
@@ -901,7 +863,8 @@ function parseXmlIncarico(txt){
 }
 
 let assegnaDati = null;
-document.getElementById('input-xml').addEventListener('change', (e)=>{
+const _inputXml = document.getElementById('input-xml');
+if(_inputXml) _inputXml.addEventListener('change', (e)=>{
   const f = e.target.files[0]; e.target.value='';
   if(!f) return;
   const r = new FileReader();
