@@ -525,7 +525,7 @@ function campoHTML(c, val, prefix){
 }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 
-const ETICHETTE_XML = {idIncarico:'ID incarico', dataIncarico:'Data incarico', dataSinistro:'Data sinistro', liquidatore:'Liquidatore', tipoSinistro:'Tipo sinistro', polizza:'N° polizza', ramo:'Ramo', agenzia:'Agenzia', inizioCopertura:'Inizio copertura', fineCopertura:'Fine copertura', garanzie:'Garanzie/partite', nota:'Nota dello Studio'};
+const ETICHETTE_XML = {idIncarico:'ID incarico', dataIncarico:'Data incarico', dataSinistro:'Data sinistro', luogoSinistro:'Luogo sinistro', descrizione:'Descrizione sinistro', liquidatore:'Liquidatore', tipoSinistro:'Tipo sinistro', polizza:'N° polizza', ramo:'Ramo', agenzia:'Agenzia', inizioCopertura:'Inizio copertura', fineCopertura:'Fine copertura', garanzie:'Garanzie/partite', nota:'Nota dello Studio'};
 
 function renderForm(){
   const box = document.getElementById('form-sezioni');
@@ -843,7 +843,11 @@ function parseXmlIncarico(txt){
   if(doc.getElementsByTagName('parsererror').length) throw new Error('file XML non valido');
   const root = doc.documentElement;
   const contr = figlio(root,'Contraente');
-  const polizza = contr ? figlio(contr,'Polizza') : null;
+  // la Polizza può stare dentro il Contraente (ReIncaricoBaseRecord) o a livello radice (IncaricoAccertatoreRecord)
+  const polizza = figlio(root,'Polizza');
+  // luogo del sinistro (se presente, tag minuscoli)
+  const ls = figlio(root,'luogosinistro');
+  const luogoSin = ls ? [testoDi(ls,'indirizzo'), [testoDi(ls,'cap'), testoDi(ls,'luogo'), testoDi(ls,'provincia')].filter(Boolean).join(' ')].filter(Boolean).join(' - ') : '';
   // nominativo: Cognome + Nome (per società il nome è nel Cognome)
   const nomeDi = (el)=> [testoDi(el,'Cognome'), testoDi(el,'Nome')].filter(Boolean).join(' ');
   // danneggiati
@@ -889,6 +893,8 @@ function parseXmlIncarico(txt){
       agenzia: polizza ? testoDi(polizza,'CodiceAgenzia') : '',
       inizioCopertura: polizza ? testoDi(polizza,'DataInizioCopertura') : '',
       fineCopertura: polizza ? testoDi(polizza,'DataFineCopertura') : '',
+      luogoSinistro: luogoSin,
+      descrizione: testoDi(root,'descrizioneSinitro'),
       garanzie: descr
     }
   };
