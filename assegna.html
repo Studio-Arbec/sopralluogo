@@ -223,7 +223,7 @@ function condividiIncarico(via){
   const link = base + '#p=' + b64enc(JSON.stringify(pl));
   const idx = document.getElementById('as-perito').value;
   const perito = idx !== '' ? leggiPeriti()[+idx] : null;
-  const msg = `📨 Nuovo incarico Studio ARBEC${perito ? ' per '+perito.nome : ''}\nSinistro ${pl.d.rif} — ${pl.d.ass_nome}\n${pl.x.nota ? 'Nota: '+pl.x.nota+'\n' : ''}Tocca il link per caricare la pratica nell'app Sopralluogo:\n${link}\n\nSe la pratica non compare: copia tutto questo messaggio, apri l'app e usa "Aggiungi incarico da codice".`;
+  const msg = `📨 Nuovo incarico Studio ARBEC${perito ? ' per '+perito.nome : ''}\nSinistro ${pl.d.rif} — ${pl.d.ass_nome}\n${pl.x.nota ? 'Nota: '+pl.x.nota+'\n' : ''}Tocca il link per caricare la pratica nell'app Sopralluogo:\n${link}\n\n📱 iPhone: se la pagina si apre dentro WhatsApp, tocca l'icona di Safari (bussola, in basso a destra) per completare il caricamento.\nIn alternativa: copia tutto questo messaggio, apri l'app e usa "Aggiungi incarico da codice".`;
   if(via==='wa'){
     if(!perito){ toast('Scegli il perito dalla rubrica'); return; }
     window.open('https://wa.me/' + normalizzaTel(perito.tel) + '?text=' + encodeURIComponent(msg), '_blank');

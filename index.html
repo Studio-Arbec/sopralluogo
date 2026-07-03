@@ -92,7 +92,7 @@
       <h2 style="font-size:15px; margin:0 0 4px; color:var(--blu);">Le mie pratiche</h2>
       <div id="lista-pratiche"><p class="hint">Nessuna pratica salvata.</p></div>
     </div>
-    <p class="hint" style="text-align:center;">I dati restano salvati su questo telefono anche senza connessione.<br>Studio Schifani — v1.3</p>
+    <p class="hint" style="text-align:center;">I dati restano salvati su questo telefono anche senza connessione.<br>Studio Schifani — v1.4</p>
   </div>
 
   <!-- ================= NUOVO: scelta tipo ================= -->
@@ -976,7 +976,8 @@ function importaDaCodice(){
 function gestisciHash(){
   const m = location.hash.match(/^#p=([A-Za-z0-9_-]+)/);
   if(!m) return false;
-  history.replaceState(null,'',location.pathname); // pulisce l'URL
+  // Il codice resta volutamente nell'indirizzo: così "Apri in Safari" dal browser
+  // interno di WhatsApp ripete l'import nel posto giusto (l'import è protetto dai doppioni).
   try{ importaPayload(JSON.parse(b64dec(m[1]))); return true; }
   catch(e){ toast('Link incarico non valido'); return false; }
 }
