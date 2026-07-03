@@ -4,7 +4,7 @@
   "description": "Modulo di sopralluogo peritale con foto geolocalizzate",
   "start_url": "./index.html",
   "scope": "./",
-  "display": "standalone",
+  "display": "browser",
   "orientation": "portrait",
   "background_color": "#1a3a5c",
   "theme_color": "#1a3a5c",
