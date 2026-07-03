@@ -92,7 +92,7 @@
       <h2 style="font-size:15px; margin:0 0 4px; color:var(--blu);">Le mie pratiche</h2>
       <div id="lista-pratiche"><p class="hint">Nessuna pratica salvata.</p></div>
     </div>
-    <p class="hint" style="text-align:center;">I dati restano salvati su questo telefono anche senza connessione.<br>Studio Schifani — v1.2</p>
+    <p class="hint" style="text-align:center;">I dati restano salvati su questo telefono anche senza connessione.<br>Studio Schifani — v1.3</p>
   </div>
 
   <!-- ================= NUOVO: scelta tipo ================= -->
@@ -572,18 +572,38 @@ document.getElementById('input-foto').addEventListener('change', async (e)=>{
   const files = [...e.target.files];
   e.target.value = '';
   if(!files.length) return;
-  toast('Acquisizione GPS in corso…');
-  const gps = await leggiGPS();
+  if(!corrente){ toast('Apri prima una pratica'); return; }
+  // 1) salva SUBITO le foto (senza aspettare il GPS: la foto non va mai persa)
+  const nuove = [];
   for(const f of files){
     try{
-      const blob = await elaboraFoto(f, gps);
+      const blob = await elaboraFoto(f, null);
       const fid = uid();
       await idbPut(fid, blob);
-      corrente.foto.push({ id:fid, ts:Date.now(), lat:gps?gps.lat:null, lon:gps?gps.lon:null, acc:gps?gps.acc:null, didascalia:'' });
-    }catch(err){ toast('Errore foto: '+err.message); }
+      const meta = { id:fid, ts:Date.now(), lat:null, lon:null, acc:null, didascalia:'' };
+      corrente.foto.push(meta);
+      nuove.push({ file:f, meta });
+      corrente.mod = Date.now(); salvaPratiche();
+    }catch(err){ toast('ERRORE salvataggio foto: ' + (err && err.message ? err.message : err)); }
   }
-  corrente.mod = Date.now(); salvaPratiche(); renderFoto(); aggiornaProgress();
-  toast(gps ? 'Foto salvate con posizione GPS ✓' : 'Foto salvate SENZA GPS (posizione non disponibile)');
+  renderFoto(); aggiornaProgress();
+  if(!nuove.length) return;
+  toast(nuove.length + ' foto salvata/e ✓ — acquisizione GPS…');
+  // 2) appena il GPS risponde, ristampa il timbro con le coordinate
+  const gps = await leggiGPS();
+  if(gps){
+    for(const n of nuove){
+      try{
+        const blob2 = await elaboraFoto(n.file, gps);
+        await idbPut(n.meta.id, blob2);
+        n.meta.lat = gps.lat; n.meta.lon = gps.lon; n.meta.acc = gps.acc;
+      }catch(err){ /* la foto resta valida anche senza timbro GPS */ }
+    }
+    corrente.mod = Date.now(); salvaPratiche(); renderFoto();
+    toast('Posizione GPS aggiunta alle foto ✓');
+  } else {
+    toast('Foto salvate ma SENZA GPS: controlla che la posizione sia consentita');
+  }
 });
 
 function leggiGPS(){
@@ -991,8 +1011,13 @@ function ripristinaTemplate(){
 }
 
 // ---------- Avvio ----------
+// gli errori imprevisti vengono mostrati a schermo (utile per assistenza)
+window.addEventListener('error', ev=>toast('Errore: ' + ev.message));
+window.addEventListener('unhandledrejection', ev=>toast('Errore: ' + (ev.reason && ev.reason.message ? ev.reason.message : ev.reason)));
+
 (async function(){
-  await apriDB();
+  try{ await apriDB(); }
+  catch(e){ toast('ATTENZIONE: archivio foto non disponibile su questo browser (' + e + ')'); }
   renderHome();
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(()=>{});
