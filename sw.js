@@ -1,12 +1,13 @@
 /* Service worker - offline con aggiornamenti automatici */
-const CACHE = 'sopralluogo-v3';
+const CACHE = 'sopralluogo-v4';
 const ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
-  'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'
+  'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js'
 ];
 
 self.addEventListener('install', (e) => {
