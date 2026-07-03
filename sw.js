@@ -1,5 +1,5 @@
-/* Service worker - cache per uso offline */
-const CACHE = 'sopralluogo-v2';
+/* Service worker - offline con aggiornamenti automatici */
+const CACHE = 'sopralluogo-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -22,16 +22,29 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+  // Pagine HTML: prima la rete (così gli aggiornamenti arrivano subito), cache solo se offline
+  if (e.request.mode === 'navigate' || e.request.destination === 'document') {
+    e.respondWith(
+      fetch(e.request).then((resp) => {
+        if (resp.ok) { const copy = resp.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); }
+        return resp;
+      }).catch(() =>
+        caches.match(e.request, { ignoreSearch: true }).then((r) => r || caches.match('./index.html'))
+      )
+    );
+    return;
+  }
+  // Altri file: prima la cache (velocità), aggiornata in sottofondo dalla rete
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then((cached) => {
-      if (cached) return cached;
-      return fetch(e.request).then((resp) => {
+      const rete = fetch(e.request).then((resp) => {
         if (e.request.method === 'GET' && resp.ok) {
           const copy = resp.clone();
           caches.open(CACHE).then((c) => c.put(e.request, copy));
         }
         return resp;
       }).catch(() => cached);
+      return cached || rete;
     })
   );
 });
