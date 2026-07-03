@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Assegna pratica — Studio ARBEC</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
 <style>
   :root{--blu:#1a3a5c; --sfondo:#f2f4f7; --card:#fff; --testo:#1c2733; --grigio:#68788c; --bordo:#d5dce4; --ok:#1e8a4c;}
   *{box-sizing:border-box;}
@@ -216,11 +217,17 @@ function payloadDaAnteprima(){
   };
 }
 
+function pulisci(o){ // rimuove i campi vuoti per accorciare il link
+  if(Array.isArray(o)) return o.map(pulisci);
+  if(o && typeof o==='object'){ const r={}; for(const [k,v] of Object.entries(o)){ const p=pulisci(v); if(p!=='' && p!=null && !(Array.isArray(p)&&!p.length)) r[k]=p; } return r; }
+  return o;
+}
 function condividiIncarico(via){
-  const pl = payloadDaAnteprima();
-  if(!pl.d.rif){ toast('Manca il n° sinistro'); return; }
+  const pl = pulisci(payloadDaAnteprima());
+  if(!pl.d || !pl.d.rif){ toast('Manca il n° sinistro'); return; }
+  if(pl.x && pl.x.garanzie) pl.x.garanzie = pl.x.garanzie.slice(0,120);
   const base = location.href.replace(/assegna\.html.*$/,'');
-  const link = base + '#p=' + b64enc(JSON.stringify(pl));
+  const link = base + '#z=' + LZString.compressToEncodedURIComponent(JSON.stringify(pl));
   const idx = document.getElementById('as-perito').value;
   const perito = idx !== '' ? leggiPeriti()[+idx] : null;
   const msg = `📨 Nuovo incarico Studio ARBEC${perito ? ' per '+perito.nome : ''}\nSinistro ${pl.d.rif} — ${pl.d.ass_nome}\n${pl.x.nota ? 'Nota: '+pl.x.nota+'\n' : ''}Tocca il link per caricare la pratica nell'app Sopralluogo:\n${link}\n\n📱 iPhone: se la pagina si apre dentro WhatsApp, tocca l'icona di Safari (bussola, in basso a destra) per completare il caricamento.\nIn alternativa: copia tutto questo messaggio, apri l'app e usa "Aggiungi incarico da codice".`;
