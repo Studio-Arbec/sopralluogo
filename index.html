@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Sopralluogo Perito</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
 <style>
   :root{
     --blu:#1a3a5c; --blu2:#2c5f8a; --sfondo:#f2f4f7; --card:#ffffff;
@@ -92,7 +93,7 @@
       <h2 style="font-size:15px; margin:0 0 4px; color:var(--blu);">Le mie pratiche</h2>
       <div id="lista-pratiche"><p class="hint">Nessuna pratica salvata.</p></div>
     </div>
-    <p class="hint" style="text-align:center;">I dati restano salvati su questo telefono anche senza connessione.<br>Studio Schifani — v1.4</p>
+    <p class="hint" style="text-align:center;">I dati restano salvati su questo telefono anche senza connessione.<br>Studio Schifani — v1.5</p>
   </div>
 
   <!-- ================= NUOVO: scelta tipo ================= -->
@@ -966,20 +967,26 @@ function importaPayload(pl){
   toast('Incarico '+pl.d.rif+' caricato ✓');
   apriForm();
 }
+function decodificaCodice(tipo, codice){
+  const json = (tipo === 'z')
+    ? LZString.decompressFromEncodedURIComponent(codice)
+    : b64dec(codice);
+  return JSON.parse(json);
+}
 function importaDaCodice(){
   const txt = prompt('Incolla qui il messaggio o il link ricevuto:');
   if(!txt) return;
-  const m = txt.match(/#p=([A-Za-z0-9_-]+)/);
+  const m = txt.match(/#([zp])=([A-Za-z0-9$_+-]+)/);
   if(!m){ toast('Nel testo incollato non trovo il codice incarico'); return; }
-  try{ importaPayload(JSON.parse(b64dec(m[1]))); }catch(e){ toast('Codice non valido'); }
+  try{ importaPayload(decodificaCodice(m[1], m[2])); }catch(e){ toast('Codice non valido o incompleto'); }
 }
 function gestisciHash(){
-  const m = location.hash.match(/^#p=([A-Za-z0-9_-]+)/);
+  const m = location.hash.match(/^#([zp])=([A-Za-z0-9$_+-]+)/);
   if(!m) return false;
   // Il codice resta volutamente nell'indirizzo: così "Apri in Safari" dal browser
   // interno di WhatsApp ripete l'import nel posto giusto (l'import è protetto dai doppioni).
-  try{ importaPayload(JSON.parse(b64dec(m[1]))); return true; }
-  catch(e){ toast('Link incarico non valido'); return false; }
+  try{ importaPayload(decodificaCodice(m[1], m[2])); return true; }
+  catch(e){ toast('Link incarico non valido o incompleto'); return false; }
 }
 
 // ---------- Impostazioni ----------
