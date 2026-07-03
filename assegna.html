@@ -29,9 +29,23 @@
 <header><h1>📨 Assegna pratica a un perito — Studio ARBEC</h1></header>
 <main>
   <div class="card">
-    <p class="hint" style="margin-top:0;">Pagina riservata alla segreteria. Carica il file XML della compagnia: i dati vengono estratti e trasformati in un messaggio WhatsApp per il perito incaricato. Aprendo il link, il perito trova la pratica precompilata nella sua app Sopralluogo.</p>
+    <p class="hint" style="margin-top:0;">Pagina riservata alla segreteria. Carica il file XML della compagnia: i dati vengono estratti e trasformati in un messaggio WhatsApp per il perito incaricato. Aprendo il link (o incollando il codice), il perito trova la pratica precompilata nella sua app Sopralluogo.</p>
     <button class="btn blu" onclick="document.getElementById('input-xml').click()">📂 Carica file XML</button>
     <input type="file" id="input-xml" accept=".xml,text/xml" class="nascosto">
+  </div>
+
+  <div class="card">
+    <h2 style="display:flex; justify-content:space-between; align-items:center;">👥 Rubrica periti
+      <button onclick="togglePeriti()" id="btn-periti" style="border:1px solid var(--bordo); background:#fff; border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer;">Gestisci</button>
+    </h2>
+    <div id="box-periti" class="nascosto">
+      <div id="lista-periti"></div>
+      <label class="fl">Nome e cognome</label><input type="text" id="np-nome">
+      <label class="fl">Cellulare (con o senza +39)</label><input type="text" id="np-tel" placeholder="es. 333 1234567">
+      <label class="fl">Email</label><input type="text" id="np-email">
+      <button class="btn blu" onclick="aggiungiPerito()">➕ Aggiungi perito</button>
+      <p class="hint">La rubrica resta salvata solo su questo computer/browser.</p>
+    </div>
   </div>
   <div id="assegna-anteprima" class="nascosto">
     <div class="card">
@@ -53,8 +67,11 @@
       <label class="fl">N° polizza</label><input type="text" id="as-polizza">
       <label class="fl">Data sinistro</label><input type="date" id="as-datasin">
       <label class="fl">Nota per il perito (facoltativa)</label><textarea id="as-nota" style="min-height:60px;"></textarea>
+      <label class="fl">Perito incaricato</label>
+      <select id="as-perito"><option value="">— scegli dalla rubrica —</option></select>
     </div>
-    <button class="btn verde" onclick="condividiIncarico('wa')">💬 Invia su WhatsApp</button>
+    <button class="btn verde" onclick="condividiIncarico('wa')">💬 Invia su WhatsApp al perito</button>
+    <button class="btn blu" onclick="condividiIncarico('email')">✉️ Invia via email al perito</button>
     <button class="btn blu" onclick="condividiIncarico('copia')">📋 Copia messaggio</button>
     <p class="hint" style="text-align:center;">Il messaggio contiene un link con i dati della pratica: nessun dato viene salvato su server.</p>
   </div>
@@ -143,6 +160,44 @@ document.getElementById('input-xml').addEventListener('change', (e)=>{
 
 function b64enc(s){ return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 
+// ---- Rubrica periti (salvata nel browser della segreteria) ----
+function leggiPeriti(){ return JSON.parse(localStorage.getItem('as_periti') || '[]'); }
+function salvaPeriti(p){ localStorage.setItem('as_periti', JSON.stringify(p)); renderPeriti(); }
+function normalizzaTel(t){
+  t = (t||'').replace(/[^\d+]/g,'').replace(/^\+/,'').replace(/^00/,'');
+  if(/^3\d{8,9}$/.test(t)) t = '39' + t; // cellulare italiano senza prefisso
+  return t;
+}
+function togglePeriti(){ document.getElementById('box-periti').classList.toggle('nascosto'); }
+function aggiungiPerito(){
+  const nome = document.getElementById('np-nome').value.trim();
+  const tel = document.getElementById('np-tel').value.trim();
+  const email = document.getElementById('np-email').value.trim();
+  if(!nome || !tel){ toast('Servono almeno nome e cellulare'); return; }
+  const p = leggiPeriti(); p.push({nome, tel, email}); salvaPeriti(p);
+  ['np-nome','np-tel','np-email'].forEach(id=>document.getElementById(id).value='');
+  toast('Perito aggiunto ✓');
+}
+function eliminaPerito(i){
+  const p = leggiPeriti();
+  if(!confirm('Eliminare '+p[i].nome+' dalla rubrica?')) return;
+  p.splice(i,1); salvaPeriti(p);
+}
+function renderPeriti(){
+  const p = leggiPeriti();
+  document.getElementById('lista-periti').innerHTML = p.length
+    ? p.map((x,i)=>`<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--bordo); font-size:14px;">
+        <span><b>${x.nome}</b><br><span class="hint">${x.tel}${x.email ? ' — '+x.email : ''}</span></span>
+        <button onclick="eliminaPerito(${i})" style="border:none; background:none; color:#b3352b; font-weight:600; cursor:pointer;">elimina</button>
+      </div>`).join('')
+    : '<p class="hint">Nessun perito in rubrica: aggiungilo qui sotto.</p>';
+  const sel = document.getElementById('as-perito');
+  const attuale = sel.value;
+  sel.innerHTML = '<option value="">— scegli dalla rubrica —</option>' + p.map((x,i)=>`<option value="${i}">${x.nome}</option>`).join('');
+  sel.value = attuale;
+}
+renderPeriti();
+
 function payloadDaAnteprima(){
   const g = id=>document.getElementById(id).value.trim();
   const p = assegnaDati || {danneggiati:[{}], x:{}};
@@ -166,9 +221,15 @@ function condividiIncarico(via){
   if(!pl.d.rif){ toast('Manca il n° sinistro'); return; }
   const base = location.href.replace(/assegna\.html.*$/,'');
   const link = base + '#p=' + b64enc(JSON.stringify(pl));
-  const msg = `📨 Nuovo incarico Studio ARBEC\nSinistro ${pl.d.rif} — ${pl.d.ass_nome}\n${pl.x.nota ? 'Nota: '+pl.x.nota+'\n' : ''}Tocca il link per caricare la pratica nell'app Sopralluogo:\n${link}\n\nSe il link non apre l'app: copia tutto questo messaggio, apri l'app e usa "Aggiungi incarico da codice".`;
+  const idx = document.getElementById('as-perito').value;
+  const perito = idx !== '' ? leggiPeriti()[+idx] : null;
+  const msg = `📨 Nuovo incarico Studio ARBEC${perito ? ' per '+perito.nome : ''}\nSinistro ${pl.d.rif} — ${pl.d.ass_nome}\n${pl.x.nota ? 'Nota: '+pl.x.nota+'\n' : ''}Tocca il link per caricare la pratica nell'app Sopralluogo:\n${link}\n\nDa iPhone: copia tutto questo messaggio, apri l'app Sopralluogo e usa "Aggiungi incarico da codice".`;
   if(via==='wa'){
-    window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+    if(!perito){ toast('Scegli il perito dalla rubrica'); return; }
+    window.open('https://wa.me/' + normalizzaTel(perito.tel) + '?text=' + encodeURIComponent(msg), '_blank');
+  } else if(via==='email'){
+    if(!perito || !perito.email){ toast('Il perito scelto non ha email in rubrica'); return; }
+    location.href = 'mailto:' + perito.email + '?subject=' + encodeURIComponent('Nuovo incarico — sinistro '+pl.d.rif) + '&body=' + encodeURIComponent(msg);
   } else {
     navigator.clipboard.writeText(msg).then(()=>toast('Messaggio copiato ✓')).catch(()=>prompt('Copia il messaggio:', msg));
   }
